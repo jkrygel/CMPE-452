@@ -6,12 +6,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
-
-# For plotting confusion matrix
-import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix
-import itertools
 import numpy as np
+
 
 class Net(nn.Module):
     def __init__(self):
@@ -48,8 +44,7 @@ def test(model, device, test_loader):
     test_loss = 0
     correct = 0
     confusion_matrix = torch.zeros(10,10)
-    #all_targets = torch.tensor([]).to(device)
-    #all_preds = torch.tensor([]).to(device)
+
     with torch.no_grad():
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
@@ -60,8 +55,6 @@ def test(model, device, test_loader):
             
             for t, p in zip(target.view(-1), pred.view(-1)):
                 confusion_matrix[t.long(), p.long()] += 1
-            #all_preds = torch.cat((all_preds, pred), dim=0)
-            #all_targets = torch.cat((all_targets, target), dim=0)
 
     test_loss /= len(test_loader.dataset)
 
@@ -69,33 +62,7 @@ def test(model, device, test_loader):
         test_loss, correct, len(test_loader.dataset),
         100. * correct / len(test_loader.dataset)))
 
-    #return all_preds, all_targets
     return confusion_matrix
-
-def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix', cmap=plt.cm.Blues):
-    if normalize:
-        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-        print("Normalized confusion matrix")
-    else:
-        print('Confusion matrix, without normalization')
-
-    print(cm)
-    plt.imshow(cm, interpolation='nearest', cmap=cmap)
-    plt.title(title)
-    plt.colorbar()
-    tick_marks = np.arange(len(classes))
-    plt.xticks(tick_marks, classes, rotation=45)
-    plt.yticks(tick_marks, classes)
-
-    fmt = '.2f' if normalize else 'd'
-    thresh = cm.max() / 2.
-    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        plt.text(j, i, format(cm[i, j], fmt), horizontalalignment="center", color="white" if cm[i, j] > thresh else "black")
-
-    plt.tight_layout()
-    plt.ylabel('True label')
-    plt.xlabel('Predicted label')
-
 
 def main():
     # Training settings
@@ -141,6 +108,7 @@ def main():
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
 
     model = Net().to(device)
+    
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.1)
 
     start_time = time.time()
@@ -151,20 +119,13 @@ def main():
     elapsed_time = time.time() - start_time
     print("Total training time: " + "%.2f"%(elapsed_time) +"s \t")
 
-    # Evaluate performance on test dataset, plot confusion matrix
-    #test_preds, test_targets = test(model, device, test_loader)
-    #test_preds = test_preds.cpu()
+    # Evaluate performance on test and train datasets, save confusion matrices
+    cm = test(model, device, test_loader).numpy().astype(int)
+    np.savetxt("2a_test.csv", cm, delimiter=",")
 
-    cm = test(model, device, test_loader)
-    print(cm)
-    #cm = confusion_matrix(dataset2.targets, test_preds.argmax(dim=1))
-    #print(dataset2.targets[0:25])
-    #print('\n')
-    #print(test_preds.argmax(dim=1)[0:25])
-    '''
-    plt.figure(figsize=(10,10))
-    plot_confusion_matrix(cm, dataset1.classes)
-    '''
+    cm = test(model, device, train_loader).numpy().astype(int)
+    np.savetxt("2a_train.csv", cm, delimiter=",")
+    
 
 if __name__ == '__main__':
     main()
